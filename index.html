@@ -9,35 +9,56 @@
       font-family: monospace;
       background: white;
       color: black;
-      padding: 20px;
-      max-width: 400px;
-      margin: 0 auto;
+      padding: 16px;
+      margin: 0;
     }
-    h1 { font-size: 20px; margin-bottom: 20px; }
-    .stat { margin-bottom: 12px; font-size: 16px; }
-    .stat span { font-size: 28px; font-weight: bold; display: block; }
+    h1 { font-size: 18px; margin-bottom: 12px; }
     .ahead { color: green; }
     .behind { color: red; }
-    hr { margin: 16px 0; border: none; border-top: 1px solid #ccc; }
+    hr { margin: 12px 0; border: none; border-top: 1px solid #ccc; }
+
+    /* two-column top section */
+    .top {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .col-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .col-right {
+      flex: 1;
+    }
+    .big-label { font-size: 13px; }
+    #elapsed {
+      font-size: clamp(36px, 10vw, 56px);
+      font-weight: bold;
+      line-height: 1.1;
+    }
+    #cumDelta {
+      font-size: clamp(36px, 10vw, 56px);
+      font-weight: bold;
+      line-height: 1.1;
+    }
+    .small-stats { margin-top: 8px; font-size: 13px; line-height: 1.8; }
+    .small-stats b { font-size: 15px; }
+
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { text-align: left; border-bottom: 1px solid #ccc; padding: 4px 6px; }
     td { padding: 4px 6px; border-bottom: 1px solid #eee; }
-    #tapBtn {
+
+    button {
       width: 100%;
-      padding: 20px;
-      font-size: 18px;
-      font-family: monospace;
-      margin-top: 16px;
-      cursor: pointer;
-    }
-    #resetBtn {
-      width: 100%;
-      padding: 10px;
-      font-size: 14px;
+      padding: 14px;
+      font-size: 16px;
       font-family: monospace;
       margin-top: 8px;
       cursor: pointer;
     }
+    #resetBtn { font-size: 13px; padding: 8px; }
     #idle {
       text-align: center;
       margin-top: 60px;
@@ -57,11 +78,21 @@
 <div id="main">
   <h1>Break 2</h1>
 
-  <div class="stat">Total time<span id="elapsed">00:00.0</span></div>
-  <div class="stat">Laps (400m)<span id="lapCount">0</span></div>
-  <div class="stat">Last split<span id="lastSplit">—</span></div>
-  <div class="stat">Split vs target<span id="splitDelta">—</span></div>
-  <div class="stat">Overall pace<span id="cumDelta">—</span></div>
+  <div class="top">
+    <div class="col-left">
+      <div class="big-label">Total time</div>
+      <div id="elapsed">00:00.0</div>
+    </div>
+    <div class="col-right">
+      <div class="big-label">Overall pace</div>
+      <div id="cumDelta">—</div>
+      <div class="small-stats">
+        Laps: <b id="lapCount">0</b><br>
+        Last split: <b id="lastSplit">—</b><br>
+        vs target: <b id="splitDelta">—</b>
+      </div>
+    </div>
+  </div>
 
   <hr>
 
@@ -95,7 +126,8 @@
 
   function fmtD(s) { return (s >= 0 ? '+' : '') + s.toFixed(2) + 's'; }
 
-  function setDelta(el, s) {
+  function setDelta(id, s) {
+    const el = document.getElementById(id);
     el.textContent = fmtD(s);
     el.className = s > 0 ? 'behind' : 'ahead';
   }
@@ -125,11 +157,11 @@
       const splitS = (laps[n-1] - laps[n-2]) / 1000;
       const splitD = splitS - TARGET_S;
       document.getElementById('lastSplit').textContent = fmtSplit(splitS);
-      setDelta(document.getElementById('splitDelta'), splitD);
+      setDelta('splitDelta', splitD);
 
       const elapsedS = (laps[n-1] - laps[0]) / 1000;
       const cumD = elapsedS - (n-1) * TARGET_S;
-      setDelta(document.getElementById('cumDelta'), cumD);
+      setDelta('cumDelta', cumD);
     }
 
     const tbody = document.getElementById('splitsList');
