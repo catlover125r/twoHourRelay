@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Break 2 Relay Tracker</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: white;
+      color: black;
+      padding: 20px;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 20px; margin-bottom: 20px; }
+    .stat { margin-bottom: 12px; font-size: 16px; }
+    .stat span { font-size: 28px; font-weight: bold; display: block; }
+    .ahead { color: green; }
+    .behind { color: red; }
+    hr { margin: 16px 0; border: none; border-top: 1px solid #ccc; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; border-bottom: 1px solid #ccc; padding: 4px 6px; }
+    td { padding: 4px 6px; border-bottom: 1px solid #eee; }
+    #tapBtn {
+      width: 100%;
+      padding: 20px;
+      font-size: 18px;
+      font-family: monospace;
+      margin-top: 16px;
+      cursor: pointer;
+    }
+    #resetBtn {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      font-family: monospace;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+    #idle {
+      text-align: center;
+      margin-top: 60px;
+      font-size: 16px;
+    }
+    #main { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="idle">
+  <h1>Break 2 — Relay Tracker</h1>
+  <p>Press <strong>SPACE</strong> or tap the button at each 400m crossing.</p>
+  <button id="tapBtn" onclick="recordLap()">TAP TO START</button>
+</div>
+
+<div id="main">
+  <h1>Break 2</h1>
+
+  <div class="stat">Total time<span id="elapsed">00:00.0</span></div>
+  <div class="stat">Laps (400m)<span id="lapCount">0</span></div>
+  <div class="stat">Last split<span id="lastSplit">—</span></div>
+  <div class="stat">Split vs target<span id="splitDelta">—</span></div>
+  <div class="stat">Overall pace<span id="cumDelta">—</span></div>
+
+  <hr>
+
+  <table>
+    <thead><tr><th>#</th><th>Split</th><th>vs target</th><th>overall</th></tr></thead>
+    <tbody id="splitsList"></tbody>
+  </table>
+
+  <button id="tapBtn2" onclick="recordLap()">TAP — 400m CROSSED</button>
+  <button id="resetBtn" onclick="reset()">RESET [R]</button>
+</div>
+
+<script>
+  const TARGET_S = 7200 / (42195 / 400); // ~68.22s per 400m
+
+  let started = false;
+  let laps = [];
+  let ticker = null;
+
+  function fmt(ms) {
+    const s = ms / 1000;
+    const m = Math.floor(s / 60);
+    const r = (s % 60).toFixed(1);
+    return String(m).padStart(2,'0') + ':' + (r < 10 ? '0' + r : r);
+  }
+
+  function fmtSplit(s) {
+    if (s < 60) return s.toFixed(2) + 's';
+    return Math.floor(s/60) + ':' + (s%60).toFixed(2).padStart(5,'0');
+  }
+
+  function fmtD(s) { return (s >= 0 ? '+' : '') + s.toFixed(2) + 's'; }
+
+  function setDelta(el, s) {
+    el.textContent = fmtD(s);
+    el.className = s > 0 ? 'behind' : 'ahead';
+  }
+
+  function recordLap() {
+    const now = performance.now();
+    if (!started) {
+      started = true;
+      laps = [now];
+      document.getElementById('idle').style.display = 'none';
+      document.getElementById('main').style.display = 'block';
+      ticker = setInterval(() => {
+        document.getElementById('elapsed').textContent = fmt(performance.now() - laps[0]);
+      }, 100);
+      render();
+      return;
+    }
+    laps.push(now);
+    render();
+  }
+
+  function render() {
+    const n = laps.length;
+    document.getElementById('lapCount').textContent = n;
+
+    if (n >= 2) {
+      const splitS = (laps[n-1] - laps[n-2]) / 1000;
+      const splitD = splitS - TARGET_S;
+      document.getElementById('lastSplit').textContent = fmtSplit(splitS);
+      setDelta(document.getElementById('splitDelta'), splitD);
+
+      const elapsedS = (laps[n-1] - laps[0]) / 1000;
+      const cumD = elapsedS - (n-1) * TARGET_S;
+      setDelta(document.getElementById('cumDelta'), cumD);
+    }
+
+    const tbody = document.getElementById('splitsList');
+    tbody.innerHTML = '';
+    for (let i = n-1; i >= 1; i--) {
+      const splitS = (laps[i] - laps[i-1]) / 1000;
+      const splitD = splitS - TARGET_S;
+      const cumD   = (laps[i] - laps[0]) / 1000 - i * TARGET_S;
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td>${i}</td>` +
+        `<td>${fmtSplit(splitS)}</td>` +
+        `<td style="color:${splitD>0?'red':'green'}">${fmtD(splitD)}</td>` +
+        `<td style="color:${cumD>0?'red':'green'}">${fmtD(cumD)}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function reset() {
+    clearInterval(ticker);
+    started = false; laps = [];
+    document.getElementById('idle').style.display = 'block';
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('elapsed').textContent = '00:00.0';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !e.repeat) { e.preventDefault(); recordLap(); }
+    if (e.code === 'KeyR') reset();
+  });
+</script>
+</body>
+</html>
